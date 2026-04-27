@@ -324,6 +324,15 @@
         <span class="unit">%</span>
       </div>
     </div>
+
+    <div class="param-group">
+      <label class="param-label" for="price">Tarif kWh</label>
+      <div class="input-wrap">
+        <input class="param-input" type="number" id="price"
+               min="0" max="10" step="0.01" value="0.25" inputmode="decimal" />
+        <span class="unit">€/kWh</span>
+      </div>
+    </div>
   </div>
 
   <div class="sb-footer">
@@ -387,6 +396,7 @@
 
       <div class="details">
         <p class="det"><span class="det-val" id="d-kwh">–</span> kWh estimé</p>
+        <p class="det"><span class="det-val" id="d-euro">–</span> € estimé</p>
       </div>
     </div>
   </div>
@@ -418,7 +428,9 @@
   const dPer100   = $('d-per100');
   const dPerKm    = $('d-perkm');
   const dKwh      = $('d-kwh');
+  const dEuro     = $('d-euro');
   const vehicleStats = $('vehicle-stats');
+  const priceIn   = $('price');
 
   /* ── sidebar ── */
   const sidebar = $('sidebar');
@@ -441,16 +453,17 @@
   $('hintLink').addEventListener('click', openSidebar);
 
   /* ── localStorage ── */
-  const DEFAULTS = { consumption: 25.5, battery: 60, arrival: 15 };
+  const DEFAULTS = { consumption: 25.5, battery: 60, arrival: 15, price: 0.25 };
   const LS_KEY = 'ecalc_params';
 
   function loadParams() {
     try {
       const saved = JSON.parse(localStorage.getItem(LS_KEY));
       if (saved) {
-        if (saved.consumption != null) consIn.value = saved.consumption;
-        if (saved.battery    != null) batIn.value  = saved.battery;
-        if (saved.arrival    != null) arrIn.value  = saved.arrival;
+        if (saved.consumption != null) consIn.value  = saved.consumption;
+        if (saved.battery    != null) batIn.value   = saved.battery;
+        if (saved.arrival    != null) arrIn.value   = saved.arrival;
+        if (saved.price      != null) priceIn.value = saved.price;
       }
     } catch (_) {}
   }
@@ -460,7 +473,8 @@
       localStorage.setItem(LS_KEY, JSON.stringify({
         consumption: consIn.value,
         battery:     batIn.value,
-        arrival:     arrIn.value
+        arrival:     arrIn.value,
+        price:       priceIn.value
       }));
     } catch (_) {}
   }
@@ -472,6 +486,7 @@
     consIn.value = DEFAULTS.consumption;
     batIn.value  = DEFAULTS.battery;
     arrIn.value  = DEFAULTS.arrival;
+    priceIn.value = DEFAULTS.price;
     saveParams();
     updateVehicleStats();
     calculate();
@@ -548,11 +563,19 @@
     dPer100.textContent = fmt(pctPer100km, 1) + ' %';
     dPerKm.textContent  = fmt(pctPerKm, 3)   + ' %';
     dKwh.textContent    = fmt(kwhNeeded, 2)   + ' kWh';
+
+    const price = parseFloat(priceIn.value);
+    if (price > 0) {
+      dEuro.textContent = fmt(kwhNeeded * price, 2) + ' €';
+      $('d-euro').closest('p').style.display = '';
+    } else {
+      $('d-euro').closest('p').style.display = 'none';
+    }
   }
 
   distIn.addEventListener('input', calculate);
 
-  [consIn, batIn, arrIn].forEach(el => {
+  [consIn, batIn, arrIn, priceIn].forEach(el => {
     el.addEventListener('input', () => { saveParams(); updateVehicleStats(); calculate(); });
   });
 
