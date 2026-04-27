@@ -474,6 +474,7 @@
       distIn.max = '';
       $('res-label').textContent    = 'Charger votre véhicule à';
       resPct.textContent            = '%';
+      $('res-sublabel').textContent = `pour arriver à destination avec – %`;
       $('d-kwh-lbl').textContent    = 'kWh estimé';
       $('d-euro-lbl').textContent   = '€ estimé';
     } else {
@@ -484,8 +485,8 @@
       distIn.max = '100';
       $('res-label').textContent    = 'Vous pouvez parcourir';
       resPct.textContent            = 'km';
-      $('d-kwh-lbl').textContent    = 'kWh disponibles';
-      $('d-euro-lbl').textContent   = '€ disponibles';
+      $('d-kwh-lbl').textContent    = 'kWh utilisés';
+      $('d-euro-lbl').textContent   = '€ estimé';
     }
     distIn.value = '';
     empty.style.display   = 'block';
@@ -595,6 +596,7 @@
     overMsg.classList.remove('visible');
 
     if (mode === 'km-to-pct') {
+      $('res-sublabel').innerHTML = `pour arriver à destination avec <span id="res-arrival-val">${fmt(arr, 0)}</span>&nbsp;%`;
       /* ── km → % ── */
       const kwhNeeded      = val * cons / 100;
       const batteryUsedPct = kwhNeeded / bat * 100;
@@ -645,13 +647,12 @@
       resValue.textContent = fmt(distMax, 0);
       setColor(resValue, 0);
       setColor(resPct, 0);
+      $('res-sublabel').textContent = `et arriver avec ${fmt(arr, 0)} %`;
 
       dPer100.textContent = fmt(cons / bat * 100, 1) + ' %';
       dPerKm.textContent  = fmt(cons / bat, 3)       + ' %';
       dKwh.textContent    = fmt(kwhAvail, 2) + ' kWh';
-      const euroEl = $('d-euro').closest('p');
-      if (price > 0) { dEuro.textContent = fmt(kwhAvail * price, 2) + ' €'; euroEl.style.display = ''; }
-      else euroEl.style.display = 'none';
+      $('d-euro').closest('p').style.display = 'none';
     }
   }
 
