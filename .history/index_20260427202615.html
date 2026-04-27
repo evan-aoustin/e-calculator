@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>e-Calculator · Charge VE</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #0b1120;
+      --surface:   #141e33;
+      --surface2:  #1c2a45;
+      --border:    #263350;
+      --accent:    #22d3ee;
+      --accent-dim: rgba(34,211,238,.18);
+      --warn:      #fb923c;
+      --danger:    #f87171;
+      --text:      #e8f0fe;
+      --muted:     #7a90b8;
+      --sidebar-w: 300px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100svh;
+      overflow-x: hidden;
+    }
+
+    /* ── OVERLAY ─────────────────────────────────── */
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+      z-index: 200;
+      opacity: 0; visibility: hidden;
+      transition: opacity .3s, visibility .3s;
+    }
+    #overlay.active { opacity: 1; visibility: visible; }
+
+    /* ── SIDEBAR ─────────────────────────────────── */
+    #sidebar {
+      position: fixed;
+      top: 0; right: 0;
+      width: var(--sidebar-w); max-width: 90vw;
+      height: 100dvh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 300;
+      transform: translateX(100%);
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+    }
+    #sidebar.open { transform: translateX(0); }
+
+    .sb-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+    .sb-title { font-size: .9375rem; font-weight: 700; }
+
+    .icon-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 7px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s;
+    }
+    .icon-btn:hover { background: var(--surface2); color: var(--text); }
+
+    .sb-body {
+      padding: 24px 20px;
+      display: flex; flex-direction: column; gap: 22px;
+      flex: 1;
+    }
+
+    .sb-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .param-group { display: flex; flex-direction: column; gap: 8px; }
+
+    .param-label {
+      font-size: .75rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+    }
+
+    .input-wrap { position: relative; }
+
+    .param-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 52px 13px 14px;
+      font-size: 1.25rem; font-weight: 600;
+      color: var(--text); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -moz-appearance: textfield;
+    }
+    .param-input::-webkit-inner-spin-button,
+    .param-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .param-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .unit {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      font-size: .75rem; font-weight: 700; color: var(--muted);
+      pointer-events: none;
+    }
+
+    .reset-btn {
+      width: 100%; padding: 11px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 11px;
+      color: var(--muted); font-size: .875rem; font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .reset-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ── HEADER ──────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.125rem; font-weight: 800;
+      color: var(--accent); letter-spacing: -.01em;
+    }
+
+    /* ── MAIN ────────────────────────────────────── */
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    /* Distance input */
+    .field-label {
+      display: block;
+      font-size: .75rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    .distance-wrap { position: relative; margin-bottom: 16px; }
+
+    #distance {
+      width: 100%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 20px 64px 20px 22px;
+      font-size: 2.25rem; font-weight: 800;
+      color: var(--text); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -moz-appearance: textfield;
+    }
+    #distance::-webkit-inner-spin-button,
+    #distance::-webkit-outer-spin-button { -webkit-appearance: none; }
+    #distance:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-dim);
+    }
+    #distance::placeholder { color: var(--border); }
+
+    .distance-unit {
+      position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+      font-size: 1rem; font-weight: 700; color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Result card */
+    #result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 26px 22px;
+    }
+
+    .res-label {
+      font-size: .8125rem; color: var(--muted); font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .res-main {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    #res-value {
+      font-size: 5rem; font-weight: 900; line-height: 1;
+      color: var(--accent);
+      text-shadow: 0 0 48px var(--accent-dim);
+      transition: color .3s, text-shadow .3s;
+    }
+    #res-pct {
+      font-size: 2.25rem; font-weight: 800;
+      color: var(--accent);
+      transition: color .3s;
+    }
+
+    #res-value.warn, #res-pct.warn { color: var(--warn); text-shadow: 0 0 40px rgba(251,146,60,.25); }
+    #res-value.danger, #res-pct.danger { color: var(--danger); text-shadow: 0 0 40px rgba(248,113,113,.25); }
+
+    #over-msg {
+      font-size: .8rem; font-style: italic; color: var(--warn);
+      margin-top: 4px; display: none;
+    }
+    #over-msg.visible { display: block; }
+
+    .divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+    .details { display: flex; flex-direction: column; gap: 9px; }
+
+    .det {
+      font-size: .875rem; font-style: italic;
+      color: var(--muted); line-height: 1.4;
+    }
+    .det-val {
+      font-style: normal; font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Empty state */
+    #empty {
+      text-align: center;
+      font-size: .875rem; color: var(--muted);
+      padding: 8px 0;
+    }
+
+    /* Hint */
+    .hint {
+      margin-top: 14px;
+      text-align: center;
+      font-size: .8125rem; color: var(--muted);
+      padding: 12px 16px;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .hint-link {
+      color: var(--accent); cursor: pointer; font-weight: 600;
+      text-decoration: underline dotted;
+    }
+
+    /* Desktop nudge */
+    @media (min-width: 640px) {
+      main { padding-top: 48px; }
+      #distance { font-size: 2.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- OVERLAY -->
+<div id="overlay"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" role="dialog" aria-modal="true" aria-label="Paramètres du véhicule">
+  <div class="sb-header">
+    <span class="sb-title">Paramètres</span>
+    <button class="icon-btn" id="closeBtn" aria-label="Fermer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sb-body">
+    <div class="param-group">
+      <label class="param-label" for="consumption">Consommation</label>
+      <div class="input-wrap">
+        <input class="param-input" type="number" id="consumption"
+               min="0.1" max="100" step="0.1" value="15" inputmode="decimal" />
+        <span class="unit">kWh/100km</span>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <label class="param-label" for="battery">Capacité de la batterie</label>
+      <div class="input-wrap">
+        <input class="param-input" type="number" id="battery"
+               min="1" max="300" step="1" value="60" inputmode="decimal" />
+        <span class="unit">kWh</span>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <label class="param-label" for="arrival">Arriver à destination avec</label>
+      <div class="input-wrap">
+        <input class="param-input" type="number" id="arrival"
+               min="0" max="80" step="1" value="10" inputmode="numeric" />
+        <span class="unit">%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-footer">
+    <button class="reset-btn" id="resetBtn">Réinitialiser les paramètres</button>
+  </div>
+</aside>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#22d3ee" fill-opacity="0.15"/>
+      <path d="M18 4L7 18h9l-2 10 10-13h-9z"
+            fill="#22d3ee" stroke="#22d3ee" stroke-width=".5" stroke-linejoin="round"/>
+    </svg>
+    e-Calculator
+  </div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Ouvrir les paramètres">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83
+               2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1
+               1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65
+               1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65
+               1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1
+               0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06
+               -.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9
+               4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65
+               1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2
+               2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65
+               1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65
+               0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+</header>
+
+<!-- MAIN -->
+<main>
+  <label class="field-label" for="distance">Distance</label>
+  <div class="distance-wrap">
+    <input id="distance" type="number" min="0" step="1"
+           placeholder="0" inputmode="numeric" autocomplete="off" />
+    <span class="distance-unit">km</span>
+  </div>
+
+  <div id="result-card">
+    <div id="empty">Entrez une distance pour calculer la charge nécessaire.</div>
+
+    <!-- Hidden until calculated -->
+    <div id="result-body" style="display:none">
+      <div class="res-label">Charger votre véhicule à</div>
+      <div class="res-main">
+        <span id="res-value">–</span>
+        <span id="res-pct">%</span>
+      </div>
+      <p id="over-msg">⚠️ Trajet trop long — une recharge intermédiaire sera nécessaire.</p>
+
+      <div class="divider"></div>
+
+      <div class="details">
+        <p class="det"><span class="det-val" id="d-per100">–</span> % au 100&nbsp;km estimé</p>
+        <p class="det"><span class="det-val" id="d-perkm">–</span> % par km estimé</p>
+        <p class="det"><span class="det-val" id="d-kwh">–</span> kWh estimé</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">
+    Configurez votre véhicule via
+    <span class="hint-link" id="hintLink">les paramètres ⚙️</span>
+  </p>
+</main>
+
+<script>
+  /* ── refs ── */
+  const $  = id => document.getElementById(id);
+  const distIn  = $('distance');
+  const consIn  = $('consumption');
+  const batIn   = $('battery');
+  const arrIn   = $('arrival');
+
+  const empty     = $('empty');
+  const resBody   = $('result-body');
+  const resValue  = $('res-value');
+  const resPct    = $('res-pct');
+  const overMsg   = $('over-msg');
+  const dPer100   = $('d-per100');
+  const dPerKm    = $('d-perkm');
+  const dKwh      = $('d-kwh');
+
+  /* ── sidebar ── */
+  const sidebar = $('sidebar');
+  const overlay = $('overlay');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  $('settingsBtn').addEventListener('click', openSidebar);
+  $('closeBtn').addEventListener('click', closeSidebar);
+  overlay.addEventListener('click', closeSidebar);
+  $('hintLink').addEventListener('click', openSidebar);
+
+  /* ── reset ── */
+  const DEFAULTS = { consumption: 15, battery: 60, arrival: 10 };
+  $('resetBtn').addEventListener('click', () => {
+    consIn.value = DEFAULTS.consumption;
+    batIn.value  = DEFAULTS.battery;
+    arrIn.value  = DEFAULTS.arrival;
+    calculate();
+  });
+
+  /* ── calculate ── */
+  function fmt(n, dec) { return n.toFixed(dec); }
+
+  function setColor(el, pct) {
+    el.classList.remove('warn', 'danger');
+    if (pct > 100 || pct >= 90) el.classList.add('danger');
+    else if (pct >= 75)         el.classList.add('warn');
+  }
+
+  function calculate() {
+    const dist  = parseFloat(distIn.value);
+    const cons  = parseFloat(consIn.value);
+    const bat   = parseFloat(batIn.value);
+    const arr   = parseFloat(arrIn.value) || 0;
+
+    const valid = dist > 0 && cons > 0 && bat > 0;
+
+    empty.style.display   = valid ? 'none' : 'block';
+    resBody.style.display = valid ? 'block' : 'none';
+
+    if (!valid) return;
+
+    /* core formula */
+    const kwhNeeded      = dist * cons / 100;               // kWh for the trip
+    const batteryUsedPct = kwhNeeded / bat * 100;           // % of battery consumed
+    const chargeNeeded   = batteryUsedPct + arr;            // % you need to start with
+
+    /* additional */
+    const pctPer100km = cons / bat * 100;
+    const pctPerKm    = cons / bat;
+
+    /* display (capped at 100 visually) */
+    const displayPct  = Math.min(chargeNeeded, 100);
+    const isOver      = chargeNeeded > 100;
+
+    resValue.textContent = fmt(displayPct, 0);
+    setColor(resValue, chargeNeeded);
+    setColor(resPct, chargeNeeded);
+    overMsg.classList.toggle('visible', isOver);
+
+    dPer100.textContent = fmt(pctPer100km, 1) + ' %';
+    dPerKm.textContent  = fmt(pctPerKm, 3)   + ' %';
+    dKwh.textContent    = fmt(kwhNeeded, 2)   + ' kWh';
+  }
+
+  [distIn, consIn, batIn, arrIn].forEach(el =>
+    el.addEventListener('input', calculate)
+  );
+
+  calculate();
+</script>
+</body>
+</html>
