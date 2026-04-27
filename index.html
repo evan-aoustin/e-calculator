@@ -223,6 +223,15 @@
       color: var(--muted); margin-top: 2px;
     }
 
+    #vehicle-stats {
+      margin-top: 12px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex; flex-direction: column; gap: 7px;
+    }
+
     #over-msg {
       font-size: .8rem; font-style: italic; color: var(--warn);
       margin-top: 4px; display: none;
@@ -377,11 +386,14 @@
       <div class="divider"></div>
 
       <div class="details">
-        <p class="det"><span class="det-val" id="d-per100">–</span> au 100&nbsp;km estimé</p>
-        <p class="det"><span class="det-val" id="d-perkm">–</span> par km estimé</p>
         <p class="det"><span class="det-val" id="d-kwh">–</span> kWh estimé</p>
       </div>
     </div>
+  </div>
+
+  <div id="vehicle-stats" style="display:none">
+    <p class="det"><span class="det-val" id="d-per100">–</span> au 100&nbsp;km estimé</p>
+    <p class="det"><span class="det-val" id="d-perkm">–</span> par km estimé</p>
   </div>
 
   <p class="hint">
@@ -406,6 +418,7 @@
   const dPer100   = $('d-per100');
   const dPerKm    = $('d-perkm');
   const dKwh      = $('d-kwh');
+  const vehicleStats = $('vehicle-stats');
 
   /* ── sidebar ── */
   const sidebar = $('sidebar');
@@ -460,8 +473,22 @@
     batIn.value  = DEFAULTS.battery;
     arrIn.value  = DEFAULTS.arrival;
     saveParams();
+    updateVehicleStats();
     calculate();
   });
+
+  /* ── vehicle stats (indépendant du km) ── */
+  function updateVehicleStats() {
+    const cons = parseFloat(consIn.value);
+    const bat  = parseFloat(batIn.value);
+    if (cons > 0 && bat > 0) {
+      dPer100.textContent = (cons / bat * 100).toFixed(1) + ' %';
+      dPerKm.textContent  = (cons / bat).toFixed(3)       + ' %';
+      vehicleStats.style.display = 'flex';
+    } else {
+      vehicleStats.style.display = 'none';
+    }
+  }
 
   /* ── calculate ── */
   function fmt(n, dec) { return n.toFixed(dec); }
@@ -512,9 +539,10 @@
   distIn.addEventListener('input', calculate);
 
   [consIn, batIn, arrIn].forEach(el => {
-    el.addEventListener('input', () => { saveParams(); calculate(); });
+    el.addEventListener('input', () => { saveParams(); updateVehicleStats(); calculate(); });
   });
 
+  updateVehicleStats();
   calculate();
 </script>
 </body>
