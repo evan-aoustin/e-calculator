@@ -278,6 +278,23 @@
       main { padding-top: 48px; }
       #distance { font-size: 2.75rem; }
     }
+
+    /* Mode toggle */
+    .mode-toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .mode-toggle-row .field-label { margin-bottom: 0; }
+    .mode-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted); font-size: .75rem; font-weight: 700;
+      padding: 6px 12px; cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s;
+      white-space: nowrap;
+    }
+    .mode-btn:hover { background: var(--border); color: var(--text); }
   </style>
 </head>
 <body>
@@ -372,11 +389,21 @@
 
 <!-- MAIN -->
 <main>
-  <label class="field-label" for="distance">Distance</label>
+  <div class="mode-toggle-row">
+    <label class="field-label" id="main-label" for="distance">Distance</label>
+    <button class="mode-btn" id="modeBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+        <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+      <span id="mode-btn-label">% → km</span>
+    </button>
+  </div>
   <div class="distance-wrap">
     <input id="distance" type="number" min="0" step="1"
            placeholder="0" inputmode="numeric" autocomplete="off" />
-    <span class="distance-unit">km</span>
+    <span class="distance-unit" id="main-unit">km</span>
   </div>
 
   <div id="result-card">
@@ -384,7 +411,7 @@
 
     <!-- Hidden until calculated -->
     <div id="result-body" style="display:none">
-      <div class="res-label">Charger votre véhicule à</div>
+      <div class="res-label" id="res-label">Charger votre véhicule à</div>
       <div class="res-main">
         <span id="res-value">–</span>
         <span id="res-pct">%</span>
@@ -395,8 +422,8 @@
       <div class="divider"></div>
 
       <div class="details">
-        <p class="det"><span class="det-val" id="d-kwh">–</span> kWh estimé</p>
-        <p class="det"><span class="det-val" id="d-euro">–</span> € estimé</p>
+        <p class="det"><span class="det-val" id="d-kwh">–</span> <span id="d-kwh-lbl">kWh estimé</span></p>
+        <p class="det"><span class="det-val" id="d-euro">–</span> <span id="d-euro-lbl">€ estimé</span></p>
       </div>
     </div>
   </div>
@@ -431,6 +458,44 @@
   const dEuro     = $('d-euro');
   const vehicleStats = $('vehicle-stats');
   const priceIn   = $('price');
+  const modeBtn   = $('modeBtn');
+
+  /* ── mode ── */
+  // 'km-to-pct' : distance (km) → charge (%)
+  // 'pct-to-km' : charge (%)   → distance (km)
+  let mode = 'km-to-pct';
+
+  function applyMode() {
+    if (mode === 'km-to-pct') {
+      $('main-label').textContent    = 'Distance';
+      $('main-unit').textContent     = 'km';
+      $('mode-btn-label').textContent = '% → km';
+      distIn.placeholder = '0';
+      distIn.max = '';
+      $('res-label').textContent    = 'Charger votre véhicule à';
+      resPct.textContent            = '%';
+      $('d-kwh-lbl').textContent    = 'kWh estimé';
+      $('d-euro-lbl').textContent   = '€ estimé';
+    } else {
+      $('main-label').textContent    = 'Charge actuelle';
+      $('main-unit').textContent     = '%';
+      $('mode-btn-label').textContent = 'km → %';
+      distIn.placeholder = '100';
+      distIn.max = '100';
+      $('res-label').textContent    = 'Vous pouvez parcourir';
+      resPct.textContent            = 'km';
+      $('d-kwh-lbl').textContent    = 'kWh disponibles';
+      $('d-euro-lbl').textContent   = '€ disponibles';
+    }
+    distIn.value = '';
+    empty.style.display   = 'block';
+    resBody.style.display = 'none';
+  }
+
+  modeBtn.addEventListener('click', () => {
+    mode = mode === 'km-to-pct' ? 'pct-to-km' : 'km-to-pct';
+    applyMode();
+  });
 
   /* ── sidebar ── */
   const sidebar = $('sidebar');
@@ -515,65 +580,82 @@
   }
 
   function calculate() {
-    const dist  = parseFloat(distIn.value);
+    const val   = parseFloat(distIn.value);
     const cons  = parseFloat(consIn.value);
     const bat   = parseFloat(batIn.value);
     const arr   = parseFloat(arrIn.value) || 0;
+    const price = parseFloat(priceIn.value);
 
-    const valid = dist > 0 && cons > 0 && bat > 0;
-
+    const valid = val > 0 && cons > 0 && bat > 0;
     empty.style.display   = valid ? 'none' : 'block';
     resBody.style.display = valid ? 'block' : 'none';
-
     if (!valid) return;
 
-    /* core formula */
-    const kwhNeeded      = dist * cons / 100;               // kWh for the trip
-    const batteryUsedPct = kwhNeeded / bat * 100;           // % of battery consumed
-    const chargeNeeded   = batteryUsedPct + arr;            // % you need to start with
-
-    /* additional */
-    const pctPer100km = cons / bat * 100;
-    const pctPerKm    = cons / bat;
-
-    /* display */
-    const isOver = chargeNeeded > 100;
-
     $('res-arrival-val').textContent = fmt(arr, 0);
-    resValue.textContent = fmt(chargeNeeded, 0);
-    setColor(resValue, chargeNeeded);
-    setColor(resPct, chargeNeeded);
+    overMsg.classList.remove('visible');
 
-    if (isOver) {
-      // km de trop : distance max possible avec arr% à l'arrivée
-      const distMax  = bat * (100 - arr) / cons;          // km max
-      const kmTrop   = dist - distMax;
-      // si on part à 100%, combien reste-t-il à l'arrivée ?
-      const arrIfFull = 100 - batteryUsedPct;
+    if (mode === 'km-to-pct') {
+      /* ── km → % ── */
+      const kwhNeeded      = val * cons / 100;
+      const batteryUsedPct = kwhNeeded / bat * 100;
+      const chargeNeeded   = batteryUsedPct + arr;
+      const isOver         = chargeNeeded > 100;
 
-      let msg = `⚠️ Trajet trop long (+${fmt(kmTrop, 0)} km)`;
-      if (arrIfFull > 0) {
-        msg += ` — ou arriver avec ${fmt(arrIfFull, 0)} %`;
+      resValue.textContent = fmt(chargeNeeded, 0);
+      setColor(resValue, chargeNeeded);
+      setColor(resPct, chargeNeeded);
+
+      if (isOver) {
+        const distMax   = bat * (100 - arr) / cons;
+        const kmTrop    = val - distMax;
+        const arrIfFull = 100 - batteryUsedPct;
+        let msg = `⚠️ Trajet trop long (+${fmt(kmTrop, 0)} km)`;
+        if (arrIfFull > 0) msg += ` — ou arriver avec ${fmt(arrIfFull, 0)} %`;
+        msg += ' — une recharge intermédiaire sera nécessaire.';
+        overMsg.textContent = msg;
+        overMsg.classList.add('visible');
       }
-      msg += ' — une recharge intermédiaire sera nécessaire.';
-      overMsg.textContent = msg;
-    }
-    overMsg.classList.toggle('visible', isOver);
 
-    dPer100.textContent = fmt(pctPer100km, 1) + ' %';
-    dPerKm.textContent  = fmt(pctPerKm, 3)   + ' %';
-    dKwh.textContent    = fmt(kwhNeeded, 2)   + ' kWh';
+      dPer100.textContent = fmt(cons / bat * 100, 1) + ' %';
+      dPerKm.textContent  = fmt(cons / bat, 3)       + ' %';
+      dKwh.textContent    = fmt(kwhNeeded, 2) + ' kWh';
+      const euroEl = $('d-euro').closest('p');
+      if (price > 0) { dEuro.textContent = fmt(kwhNeeded * price, 2) + ' €'; euroEl.style.display = ''; }
+      else euroEl.style.display = 'none';
 
-    const price = parseFloat(priceIn.value);
-    if (price > 0) {
-      dEuro.textContent = fmt(kwhNeeded * price, 2) + ' €';
-      $('d-euro').closest('p').style.display = '';
     } else {
-      $('d-euro').closest('p').style.display = 'none';
+      /* ── % → km ── */
+      const currentPct = val;
+      const available  = currentPct - arr;
+
+      if (available <= 0) {
+        resValue.textContent = '0';
+        setColor(resValue, 200);
+        setColor(resPct, 200);
+        overMsg.textContent = "⚠️ Batterie insuffisante pour atteindre la destination avec ce confort d’arrivée.";
+        overMsg.classList.add('visible');
+        dKwh.textContent = '0 kWh';
+        $('d-euro').closest('p').style.display = 'none';
+        return;
+      }
+
+      const kwhAvail = available / 100 * bat;
+      const distMax  = kwhAvail * 100 / cons;
+
+      resValue.textContent = fmt(distMax, 0);
+      setColor(resValue, 0);
+      setColor(resPct, 0);
+
+      dPer100.textContent = fmt(cons / bat * 100, 1) + ' %';
+      dPerKm.textContent  = fmt(cons / bat, 3)       + ' %';
+      dKwh.textContent    = fmt(kwhAvail, 2) + ' kWh';
+      const euroEl = $('d-euro').closest('p');
+      if (price > 0) { dEuro.textContent = fmt(kwhAvail * price, 2) + ' €'; euroEl.style.display = ''; }
+      else euroEl.style.display = 'none';
     }
   }
 
-  distIn.addEventListener('input', calculate);
+    distIn.addEventListener('input', calculate);
 
   [consIn, batIn, arrIn, priceIn].forEach(el => {
     el.addEventListener('input', () => { saveParams(); updateVehicleStats(); calculate(); });
