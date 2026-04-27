@@ -218,6 +218,11 @@
     #res-value.warn, #res-pct.warn { color: var(--warn); text-shadow: 0 0 40px rgba(251,146,60,.25); }
     #res-value.danger, #res-pct.danger { color: var(--danger); text-shadow: 0 0 40px rgba(248,113,113,.25); }
 
+    #res-sublabel {
+      font-size: .8125rem; font-style: italic;
+      color: var(--muted); margin-top: 2px;
+    }
+
     #over-msg {
       font-size: .8rem; font-style: italic; color: var(--warn);
       margin-top: 4px; display: none;
@@ -366,6 +371,7 @@
         <span id="res-value">–</span>
         <span id="res-pct">%</span>
       </div>
+      <p id="res-sublabel">pour arriver à destination avec <span id="res-arrival-val">–</span>&nbsp;%</p>
       <p id="over-msg">⚠️ Trajet trop long — une recharge intermédiaire sera nécessaire.</p>
 
       <div class="divider"></div>
@@ -492,6 +498,7 @@
     const displayPct  = Math.min(chargeNeeded, 100);
     const isOver      = chargeNeeded > 100;
 
+    $('res-arrival-val').textContent = fmt(arr, 0);
     resValue.textContent = fmt(displayPct, 0);
     setColor(resValue, chargeNeeded);
     setColor(resPct, chargeNeeded);
