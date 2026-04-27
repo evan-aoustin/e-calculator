@@ -288,7 +288,7 @@
       <label class="param-label" for="consumption">Consommation</label>
       <div class="input-wrap">
         <input class="param-input" type="number" id="consumption"
-               min="0.1" max="100" step="0.1" value="15" inputmode="decimal" />
+               min="0.1" max="100" step="0.1" value="25.5" inputmode="decimal" />
         <span class="unit">kWh/100km</span>
       </div>
     </div>
@@ -306,7 +306,7 @@
       <label class="param-label" for="arrival">Arriver à destination avec</label>
       <div class="input-wrap">
         <input class="param-input" type="number" id="arrival"
-               min="0" max="80" step="1" value="10" inputmode="numeric" />
+               min="0" max="80" step="1" value="15" inputmode="numeric" />
         <span class="unit">%</span>
       </div>
     </div>
@@ -422,7 +422,7 @@
   $('hintLink').addEventListener('click', openSidebar);
 
   /* ── reset ── */
-  const DEFAULTS = { consumption: 15, battery: 60, arrival: 10 };
+  const DEFAULTS = { consumption: 25.5, battery: 60, arrival: 15 };
   $('resetBtn').addEventListener('click', () => {
     consIn.value = DEFAULTS.consumption;
     batIn.value  = DEFAULTS.battery;
