@@ -421,12 +421,39 @@
   overlay.addEventListener('click', closeSidebar);
   $('hintLink').addEventListener('click', openSidebar);
 
-  /* ── reset ── */
+  /* ── localStorage ── */
   const DEFAULTS = { consumption: 25.5, battery: 60, arrival: 15 };
+  const LS_KEY = 'ecalc_params';
+
+  function loadParams() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY));
+      if (saved) {
+        if (saved.consumption != null) consIn.value = saved.consumption;
+        if (saved.battery    != null) batIn.value  = saved.battery;
+        if (saved.arrival    != null) arrIn.value  = saved.arrival;
+      }
+    } catch (_) {}
+  }
+
+  function saveParams() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        consumption: consIn.value,
+        battery:     batIn.value,
+        arrival:     arrIn.value
+      }));
+    } catch (_) {}
+  }
+
+  loadParams();
+
+  /* ── reset ── */
   $('resetBtn').addEventListener('click', () => {
     consIn.value = DEFAULTS.consumption;
     batIn.value  = DEFAULTS.battery;
     arrIn.value  = DEFAULTS.arrival;
+    saveParams();
     calculate();
   });
 
@@ -475,9 +502,11 @@
     dKwh.textContent    = fmt(kwhNeeded, 2)   + ' kWh';
   }
 
-  [distIn, consIn, batIn, arrIn].forEach(el =>
-    el.addEventListener('input', calculate)
-  );
+  distIn.addEventListener('input', calculate);
+
+  [consIn, batIn, arrIn].forEach(el => {
+    el.addEventListener('input', () => { saveParams(); calculate(); });
+  });
 
   calculate();
 </script>
