@@ -495,8 +495,8 @@
 
   function setColor(el, pct) {
     el.classList.remove('warn', 'danger');
-    if (pct > 100 || pct >= 90) el.classList.add('danger');
-    else if (pct >= 75)         el.classList.add('warn');
+    if (pct > 100)    el.classList.add('danger');
+    else if (pct >= 75) el.classList.add('warn');
   }
 
   function calculate() {
@@ -521,12 +521,11 @@
     const pctPer100km = cons / bat * 100;
     const pctPerKm    = cons / bat;
 
-    /* display (capped at 100 visually) */
-    const displayPct  = Math.min(chargeNeeded, 100);
-    const isOver      = chargeNeeded > 100;
+    /* display */
+    const isOver = chargeNeeded > 100;
 
     $('res-arrival-val').textContent = fmt(arr, 0);
-    resValue.textContent = fmt(displayPct, 0);
+    resValue.textContent = fmt(chargeNeeded, 0);
     setColor(resValue, chargeNeeded);
     setColor(resPct, chargeNeeded);
 
