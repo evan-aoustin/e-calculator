@@ -381,7 +381,7 @@
         <span id="res-pct">%</span>
       </div>
       <p id="res-sublabel">pour arriver à destination avec <span id="res-arrival-val">–</span>&nbsp;%</p>
-      <p id="over-msg">⚠️ Trajet trop long — une recharge intermédiaire sera nécessaire.</p>
+      <p id="over-msg"></p>
 
       <div class="divider"></div>
 
@@ -529,6 +529,21 @@
     resValue.textContent = fmt(displayPct, 0);
     setColor(resValue, chargeNeeded);
     setColor(resPct, chargeNeeded);
+
+    if (isOver) {
+      // km de trop : distance max possible avec arr% à l'arrivée
+      const distMax  = bat * (100 - arr) / cons;          // km max
+      const kmTrop   = dist - distMax;
+      // si on part à 100%, combien reste-t-il à l'arrivée ?
+      const arrIfFull = 100 - batteryUsedPct;
+
+      let msg = `⚠️ Trajet trop long (+${fmt(kmTrop, 0)} km)`;
+      if (arrIfFull > 0) {
+        msg += ` — ou arriver avec ${fmt(arrIfFull, 0)} %`;
+      }
+      msg += ' — une recharge intermédiaire sera nécessaire.';
+      overMsg.textContent = msg;
+    }
     overMsg.classList.toggle('visible', isOver);
 
     dPer100.textContent = fmt(pctPer100km, 1) + ' %';
